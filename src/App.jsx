@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { auth, provider, db } from "./firebase.jsx";
+import React, { useEffect, useState, useRef } from "react";
+import { auth, provider, db } from "./firebase";
 import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import {
   collection,
@@ -13,6 +13,7 @@ const App = () => {
   const [user, setUser] = useState(null);
   const [msg, setMsg] = useState("");
   const [messages, setMessages] = useState([]);
+  const chatRef = useRef(null);
 
   // 🔐 Login
   const login = async () => {
@@ -45,7 +46,7 @@ const App = () => {
   useEffect(() => {
     const q = query(
       collection(db, "messages"),
-      orderBy("createdAt")
+      orderBy("createdAt", "desc")
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -55,7 +56,7 @@ const App = () => {
     return () => unsubscribe();
   }, []);
 
-  // 🔐 FIX login persist
+  // 🔐 Auth persist
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -63,6 +64,13 @@ const App = () => {
 
     return () => unsubscribe();
   }, []);
+
+  // 🔽 Auto scroll to bottom
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white flex flex-col items-center p-4">
@@ -99,17 +107,19 @@ const App = () => {
             </button>
           </div>
 
-          {/* MAIN LAYOUT (RIGHT SIDE DESIGN) */}
+          {/* MAIN LAYOUT */}
           <div className="w-full max-w-4xl flex gap-4 flex-col md:flex-row">
 
-            {/* 💬 LIVE CHAT BOX */}
+            {/* CHAT BOX */}
             <div className="w-full md:w-2/3">
               <h2 className="text-xl font-bold mb-2 text-green-400">
-                📡 Live Chat Here
+                📡 Live Chat
               </h2>
 
-              <div className="h-[450px] overflow-y-auto bg-gray-800 p-4 rounded-xl shadow-lg flex flex-col gap-2">
-
+              <div
+                ref={chatRef}
+                className="h-[450px] overflow-y-auto bg-gray-800 p-4 rounded-xl shadow-lg flex flex-col gap-2"
+              >
                 {messages.map((m, i) => (
                   <div
                     key={i}
@@ -132,15 +142,13 @@ const App = () => {
                     </p>
                   </div>
                 ))}
-
               </div>
             </div>
 
-            {/* ✍️ INPUT BOX (RIGHT SIDE) */}
+            {/* INPUT BOX */}
             <div className="w-full md:w-1/3 flex flex-col">
-
               <h2 className="text-xl font-bold mb-2 text-blue-400 text-right">
-                ✍️ Type Your Chat
+                ✍️ Type Message
               </h2>
 
               <div className="flex flex-col gap-3 bg-gray-800 p-4 rounded-xl shadow-lg">
@@ -148,7 +156,7 @@ const App = () => {
                 <input
                   value={msg}
                   onChange={(e) => setMsg(e.target.value)}
-                  className="p-3 rounded-lg bg-white text-black placeholder:text-gray-500 outline-none"
+                  className="p-3 rounded-lg bg-white text-black outline-none"
                   placeholder="Write message..."
                 />
 
@@ -156,7 +164,7 @@ const App = () => {
                   onClick={sendMessage}
                   className="bg-green-500 hover:bg-green-600 px-5 py-2 rounded-lg text-white font-medium"
                 >
-                  Send Message
+                  Send
                 </button>
 
               </div>
